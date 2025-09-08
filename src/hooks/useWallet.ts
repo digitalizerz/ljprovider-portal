@@ -1,137 +1,145 @@
 import { useState, useEffect } from 'react';
-import { DoctorAPI } from '../services/doctorAPI';
+import { AppointmentAPI } from '../services/appointmentAPI';
 import { useAuth } from './useAuth';
-import type { WalletTransaction, WithdrawRequest, PaginatedResponse } from '../types/api';
+import type { Appointment, PaginatedResponse } from '../types/api';
 
-export const useWallet = () => {
-  const { token, doctor } = useAuth();
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
+export const useAppointments = () => {
+  const { token } = useAuth();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWalletStatement = async (filters?: {
+  const fetchAppointmentRequests = async (filters?: {
     page?: number;
     limit?: number;
-    from_date?: string;
-    to_date?: string;
+    status?: 'pending' | 'accepted' | 'declined';
   }) => {
     if (!token) return;
     
     try {
       setIsLoading(true);
       setError(null);
-      const response = await DoctorAPI.fetchDoctorWalletStatement(filters || {}, token);
+      const response = await AppointmentAPI.fetchAppointmentRequests(filters || {}, token);
       
       if (response.success) {
-        setTransactions(response.data.data);
+        setAppointments(response.data.data);
       } else {
         setError(response.message);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch wallet statement');
+      setError(err instanceof Error ? err.message : 'Failed to fetch appointments');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchEarningHistory = async (filters?: {
-    page?: number;
-    limit?: number;
-    from_date?: string;
-    to_date?: string;
-  }) => {
+  const fetchAppointmentsByDate = async (date: string) => {
     if (!token) return;
     
     try {
       setIsLoading(true);
       setError(null);
-      const response = await DoctorAPI.fetchDoctorEarningHistory(filters || {}, token);
+      const response = await AppointmentAPI.fetchAcceptedAppointsByDate({ date }, token);
       
       if (response.success) {
-        setTransactions(response.data.data);
+        setAppointments(response.data);
       } else {
         setError(response.message);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch earning history');
+      setError(err instanceof Error ? err.message : 'Failed to fetch appointments');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const submitWithdrawRequest = async (amount: number, bankDetails: string) => {
+  const acceptAppointment = async (appointmentId: number) => {
     if (!token) return;
     
     try {
-      setIsLoading(true);
-      setError(null);
-      const response = await DoctorAPI.submitDoctorWithdrawRequest({
-        amount,
-        bank_account_details: bankDetails
-      }, token);
+      const response = await AppointmentAPI.acceptAppointment({ appointment_id: appointmentId }, token);
       
       if (response.success) {
-        // Refresh withdraw requests
-        await fetchPayoutHistory();
+        // Update local state
+        setAppointments(prev => 
+          prev.map(apt => 
+            apt.id === appointmentId 
+              ? { ...apt, status: 'accepted' }
+              : apt
+          )
+        );
         return response.data;
       } else {
         throw new Error(response.message);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit withdraw request');
+      setError(err instanceof Error ? err.message : 'Failed to accept appointment');
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const fetchPayoutHistory = async (filters?: {
-    page?: number;
-    limit?: number;
-  }) => {
+  const declineAppointment = async (appointmentId: number, reason?: string) => {
     if (!token) return;
     
     try {
-      setIsLoading(true);
-      setError(null);
-      const response = await DoctorAPI.fetchDoctorPayoutHistory(filters || {}, token);
+      const response = await AppointmentAPI.declineAppointment({ 
+        appointment_id: appointmentId,
+        reason 
+      }, token);
       
       if (response.success) {
-        setWithdrawRequests(response.data.data);
+        // Update local state
+        setAppointments(prev => 
+          prev.map(apt => 
+            apt.id === appointmentId 
+              ? { ...apt, status: 'declined' }
+              : apt
+          )
+        );
+        return response.data;
       } else {
-        setError(response.message);
+        throw new Error(response.message);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch payout history');
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : 'Failed to decline appointment');
+      throw err;
     }
   };
 
-  // Calculate wallet stats
-  const walletStats = {
-    currentBalance: doctor?.wallet_balance || 0,
-    totalEarnings: transactions
-      .filter(t => t.transaction_type === 'credit')
-      .reduce((sum, t) => sum + t.amount, 0),
-    totalWithdrawn: transactions
-      .filter(t => t.transaction_type === 'debit')
-      .reduce((sum, t) => sum + t.amount, 0),
-    pendingWithdrawals: withdrawRequests
-      .filter(r => r.status === 'pending')
-      .reduce((sum, r) => sum + r.amount, 0),
+  const completeAppointment = async (appointmentId: number) => {
+    if (!token) return;
+    
+    try {
+      const response = await AppointmentAPI.completeAppointment({ appointment_id: appointmentId }, token);
+      
+      if (response.success) {
+        // Update local state
+        setAppointments(prev => 
+          prev.map(apt => 
+            apt.id === appointmentId 
+              ? { ...apt, status: 'completed' }
+              : apt
+          )
+        );
+        return response.data;
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete appointment');
+      throw err;
+    }
   };
 
   return {
-    transactions,
-    withdrawRequests,
-    walletStats,
+    appointments,
     isLoading,
     error,
-    fetchWalletStatement,
-    fetchEarningHistory,
-    submitWithdrawRequest,
-    fetchPayoutHistory,
+    fetchAppointmentRequests,
+    fetchAppointmentsByDate,
+    fetchAppointmentsByDate,
+    acceptAppointment,
+    declineAppointment,
+    completeAppointment,
   };
 };
