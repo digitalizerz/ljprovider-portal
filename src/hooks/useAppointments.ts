@@ -137,6 +137,7 @@ export const useAppointments = () => {
     error,
     fetchAppointmentRequests,
     fetchAppointmentsByDate,
+    fetchAppointmentsByDate,
     acceptAppointment,
     declineAppointment,
     completeAppointment,

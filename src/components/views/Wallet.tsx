@@ -1,51 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, Calendar, Download, CreditCard, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import MetricCard from '../MetricCard';
+import { useAuth } from '../../hooks/useAuth';
+import { useWallet } from '../../hooks/useWallet';
+import LoadingSpinner from '../common/LoadingSpinner';
+import ErrorMessage from '../common/ErrorMessage';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const Wallet: React.FC = () => {
+  const { doctor } = useAuth();
+  const { 
+    transactions, 
+    withdrawRequests, 
+    walletStats, 
+    isLoading, 
+    error,
+    fetchWalletStatement,
+    fetchEarningHistory,
+    submitWithdrawRequest,
+    fetchPayoutHistory
+  } = useWallet();
+  
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [bankDetails, setBankDetails] = useState('');
 
-  const walletStats = {
-    currentBalance: 2450.75,
-    monthlyEarnings: 3200.00,
-    pendingPayouts: 450.00,
-    totalEarnings: 28750.50
-  };
+  useEffect(() => {
+    fetchWalletStatement();
+    fetchEarningHistory();
+    fetchPayoutHistory();
+  }, []);
 
-  const transactions = [
-    {
-      id: 1,
-      type: 'earning',
-      description: 'Session with Sarah Johnson',
-      amount: 150.00,
-      date: '2024-12-20',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      type: 'payout',
-      description: 'Bank Transfer',
-      amount: -800.00,
-      date: '2024-12-19',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      type: 'earning',
-      description: 'Session with Michael Chen',
-      amount: 150.00,
-      date: '2024-12-18',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      type: 'earning',
-      description: 'Session with Emma Davis',
-      amount: 150.00,
-      date: '2024-12-17',
-      status: 'pending'
+  const handleWithdrawRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await submitWithdrawRequest(parseFloat(withdrawAmount), bankDetails);
+      setShowWithdrawModal(false);
+      setWithdrawAmount('');
+      setBankDetails('');
+      alert('Withdraw request submitted successfully!');
+    } catch (error) {
+      alert('Failed to submit withdraw request. Please try again.');
     }
-  ];
+  };
 
   const earningsData = [
     { month: 'Jul', amount: 2800 },
@@ -56,8 +54,20 @@ const Wallet: React.FC = () => {
     { month: 'Dec', amount: 3200 },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
+      {error && (
+        <ErrorMessage message={error} className="mb-6" />
+      )}
+      
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl text-display text-gray-800 mb-2 text-shadow">Wallet & Earnings</h1>
@@ -70,7 +80,7 @@ const Wallet: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Current Balance"
-          value={`$${walletStats.currentBalance.toLocaleString()}`}
+          value={formatCurrency(walletStats.currentBalance)}
           change="+$450 this week"
           changeType="positive"
           icon={DollarSign}
@@ -78,7 +88,7 @@ const Wallet: React.FC = () => {
         />
         <MetricCard
           title="Monthly Earnings"
-          value={`$${walletStats.monthlyEarnings.toLocaleString()}`}
+          value={formatCurrency(walletStats.totalEarnings)}
           change="+12% from last month"
           changeType="positive"
           icon={TrendingUp}
@@ -86,7 +96,7 @@ const Wallet: React.FC = () => {
         />
         <MetricCard
           title="Pending Payouts"
-          value={`$${walletStats.pendingPayouts.toLocaleString()}`}
+          value={formatCurrency(walletStats.pendingWithdrawals)}
           change="3 sessions pending"
           changeType="neutral"
           icon={Calendar}
@@ -94,7 +104,7 @@ const Wallet: React.FC = () => {
         />
         <MetricCard
           title="Total Earnings"
-          value={`$${walletStats.totalEarnings.toLocaleString()}`}
+          value={formatCurrency(walletStats.totalEarnings)}
           change="+25% this year"
           changeType="positive"
           icon={CreditCard}
@@ -166,7 +176,10 @@ const Wallet: React.FC = () => {
         <div className="glass-card rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 text-shadow">Quick Actions</h3>
           <div className="space-y-4">
-            <button className="w-full glass-button rounded-lg p-4 hover:bg-white/30 transition-all duration-300 text-left">
+            <button 
+              onClick={() => setShowWithdrawModal(true)}
+              className="w-full glass-button rounded-lg p-4 hover:bg-white/30 transition-all duration-300 text-left"
+            >
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
                   <Download className="w-5 h-5 text-emerald-600" />
@@ -219,9 +232,9 @@ const Wallet: React.FC = () => {
             <div key={transaction.id} className="flex items-center justify-between glass-button rounded-lg p-4">
               <div className="flex items-center space-x-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  transaction.type === 'earning' ? 'bg-emerald-100' : 'bg-blue-100'
+                  transaction.transaction_type === 'credit' ? 'bg-emerald-100' : 'bg-blue-100'
                 }`}>
-                  {transaction.type === 'earning' ? (
+                  {transaction.transaction_type === 'credit' ? (
                     <ArrowUpRight className="w-5 h-5 text-emerald-600" />
                   ) : (
                     <ArrowDownLeft className="w-5 h-5 text-blue-600" />
@@ -229,14 +242,14 @@ const Wallet: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-medium text-gray-800 text-shadow-light">{transaction.description}</p>
-                  <p className="text-sm text-gray-600">{new Date(transaction.date).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-600">{formatDate(transaction.created_at)}</p>
                 </div>
               </div>
               <div className="text-right">
                 <p className={`font-semibold ${
-                  transaction.amount > 0 ? 'text-emerald-600' : 'text-blue-600'
+                  transaction.transaction_type === 'credit' ? 'text-emerald-600' : 'text-blue-600'
                 }`}>
-                  {transaction.amount > 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                  {transaction.transaction_type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
                 </p>
                 <p className={`text-sm ${
                   transaction.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'
@@ -248,6 +261,59 @@ const Wallet: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Withdraw Request Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Request Payout</h3>
+            <form onSubmit={handleWithdrawRequest} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount (Available: {formatCurrency(walletStats.currentBalance)})
+                </label>
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter amount"
+                  min="10"
+                  max={walletStats.currentBalance}
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account Details</label>
+                <textarea
+                  value={bankDetails}
+                  onChange={(e) => setBankDetails(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={4}
+                  placeholder="Bank Name, Account Number, Routing Number, etc."
+                  required
+                />
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
