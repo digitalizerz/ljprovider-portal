@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AppointmentAPI } from '../services/appointmentAPI';
 import { useAuth } from './useAuth';
-import type { Appointment, PaginatedResponse } from '../types/api';
+import type { Appointment } from '../types/api';
 
 export const useAppointments = () => {
   const { token } = useAuth();
@@ -60,7 +60,6 @@ export const useAppointments = () => {
       const response = await AppointmentAPI.acceptAppointment({ appointment_id: appointmentId }, token);
       
       if (response.success) {
-        // Update local state
         setAppointments(prev => 
           prev.map(apt => 
             apt.id === appointmentId 
@@ -88,7 +87,6 @@ export const useAppointments = () => {
       }, token);
       
       if (response.success) {
-        // Update local state
         setAppointments(prev => 
           prev.map(apt => 
             apt.id === appointmentId 
@@ -113,7 +111,6 @@ export const useAppointments = () => {
       const response = await AppointmentAPI.completeAppointment({ appointment_id: appointmentId }, token);
       
       if (response.success) {
-        // Update local state
         setAppointments(prev => 
           prev.map(apt => 
             apt.id === appointmentId 
@@ -136,7 +133,6 @@ export const useAppointments = () => {
     isLoading,
     error,
     fetchAppointmentRequests,
-    fetchAppointmentsByDate,
     fetchAppointmentsByDate,
     acceptAppointment,
     declineAppointment,
