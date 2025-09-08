@@ -3,7 +3,7 @@ import { AppointmentAPI } from '../services/appointmentAPI';
 import { useAuth } from './useAuth';
 import type { Appointment, PaginatedResponse } from '../types/api';
 
-export const useAppointments = () => {
+export const useWallet = () => {
   const { token } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
