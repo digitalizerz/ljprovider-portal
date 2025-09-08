@@ -1,17 +1,23 @@
 import React from 'react';
 import { LogOut, Bell, User } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface HeaderProps {
   onLogout: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onLogout }) => {
+  const { doctor } = useAuth();
+  
+  const doctorName = doctor 
+    ? `${doctor.first_name} ${doctor.last_name}`
+    : 'Doctor';
   return (
     <header className="glass-header px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h2 className="text-xl font-semibold text-gray-800 text-shadow">
-            Welcome back, Dr. Smith
+            Welcome back, {doctorName}
           </h2>
         </div>
         

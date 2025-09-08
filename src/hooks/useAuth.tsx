@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<Doctor>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,52 +40,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedToken && storedDoctor) {
       setToken(storedToken);
       setDoctor(JSON.parse(storedDoctor));
+      // Refresh profile data from server
+      refreshProfileData(storedToken);
+    } else {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, []);
 
+  const refreshProfileData = async (authToken: string) => {
+    try {
+      const response = await DoctorAPI.fetchMyDoctorProfile(authToken);
+      if (response.success) {
+        setDoctor(response.data);
+        localStorage.setItem('doctor_profile', JSON.stringify(response.data));
+      }
+    } catch (error) {
+      console.error('Failed to refresh profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       
-      // For demo purposes, simulate authentication
-      // In production, this would call your Laravel API with Firebase token
-      if (email.includes('@') && password.length >= 6) {
-        // Mock doctor data
-        const mockDoctor: Doctor = {
-          id: 1,
-          first_name: 'Dr. Sarah',
-          last_name: 'Smith',
-          email: email,
-          mobile: '+1 (555) 123-4567',
-          category_id: 1,
-          category_name: 'Clinical Psychology',
-          experience_years: 8,
-          consultation_fee: 150,
-          rating: 4.9,
-          total_reviews: 127,
-          bio: 'Experienced clinical psychologist specializing in anxiety, depression, and trauma therapy.',
-          education: 'PhD in Clinical Psychology, Harvard University',
-          languages: ['English', 'Spanish'],
-          specializations: ['Anxiety', 'Depression', 'Trauma'],
-          is_online: true,
-          is_verified: true,
-          wallet_balance: 2450.75,
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-12-20T00:00:00Z'
-        };
+      // Call real Laravel API for authentication
+      const response = await AuthAPI.doctorLogin({ email, password });
+      
+      if (response.success && response.data) {
+        const { token: authToken, ...doctorData } = response.data;
         
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        
-        setDoctor(mockDoctor);
-        setToken(mockToken);
+        setDoctor(doctorData);
+        setToken(authToken);
         
         // Store in localStorage
-        localStorage.setItem('doctor_token', mockToken);
-        localStorage.setItem('doctor_profile', JSON.stringify(mockDoctor));
+        localStorage.setItem('doctor_token', authToken);
+        localStorage.setItem('doctor_profile', JSON.stringify(doctorData));
+        
+        // Fetch complete profile data
+        await refreshProfileData(authToken);
       } else {
-        throw new Error('Invalid email or password');
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -105,13 +101,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // In production, call Laravel API to logout
       if (token) {
         try {
           await DoctorAPI.logOutDoctor(token);
         } catch (error) {
           console.error('Laravel logout error:', error);
-          // Continue with logout even if API call fails
         }
       }
       
@@ -141,6 +135,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshProfile = async () => {
+    if (!token) return;
+    await refreshProfileData(token);
+  };
   const value = {
     doctor,
     token,
@@ -149,6 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     logout,
     updateProfile,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

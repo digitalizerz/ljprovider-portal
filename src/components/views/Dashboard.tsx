@@ -3,6 +3,8 @@ import { Calendar, Users, MessageSquare, TrendingUp, Activity, Clock, Video } fr
 import MetricCard from '../MetricCard';
 import ChartCard from '../ChartCard';
 import { useAuth } from '../../hooks/useAuth';
+import { AppointmentAPI } from '../../services/appointmentAPI';
+import { DoctorAPI } from '../../services/doctorAPI';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 
@@ -23,87 +25,49 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      if (isLoading) {
-        setIsLoading(false);
-        // Set some default data if API calls fail
-        setDashboardData({
-          todayAppointments: 0,
-          newMessages: 0,
-          totalPatients: 28, // From mock data
-          upcomingAppointments: [],
-          recentMessages: []
-        });
-      }
-    }, 5000); // 5 second timeout
-
-    fetchDashboardData();
-    
-    return () => clearTimeout(loadingTimeout);
+    if (token) {
+      fetchDashboardData();
+    }
   }, [token]);
 
   const fetchDashboardData = async () => {
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    if (!token) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
-      // For now, use fallback data while API integration is being tested
-      // This prevents the infinite loading state
+      // Fetch real data from Laravel backend
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get today's appointments
+      const appointmentsResponse = await AppointmentAPI.fetchAcceptedAppointsByDate({ date: today }, token);
+      const todayAppointments = appointmentsResponse.success ? appointmentsResponse.data : [];
+      
+      // Get pending appointment requests
+      const requestsResponse = await AppointmentAPI.fetchAppointmentRequests({ status: 'pending' }, token);
+      const pendingRequests = requestsResponse.success ? requestsResponse.data.data : [];
+      
+      // Get notifications as messages
+      const notificationsResponse = await DoctorAPI.fetchDoctorNotifications({ limit: 5 }, token);
+      const notifications = notificationsResponse.success ? notificationsResponse.data.data : [];
+      
       setDashboardData({
-        todayAppointments: 3,
-        newMessages: 2,
-        totalPatients: 28,
-        upcomingAppointments: [
-          {
-            id: 1,
-            patient: { name: 'Sarah Johnson' },
-            appointment_time: '10:00 AM',
-            consultation_type: 'video',
-            symptoms: 'Follow-up session',
-            status: 'confirmed'
-          },
-          {
-            id: 2,
-            patient: { name: 'Michael Chen' },
-            appointment_time: '2:00 PM',
-            consultation_type: 'video',
-            symptoms: 'Initial consultation',
-            status: 'confirmed'
-          }
-        ],
-        recentMessages: [
-          {
-            id: 1,
-            title: 'New Appointment Request',
-            message: 'Sarah Johnson has requested an appointment',
-            created_at: new Date().toISOString(),
-            is_read: false,
-            type: 'appointment'
-          },
-          {
-            id: 2,
-            title: 'Payment Received',
-            message: 'Payment of $150 received from Michael Chen',
-            created_at: new Date().toISOString(),
-            is_read: false,
-            type: 'payment'
-          }
-        ]
+        todayAppointments: todayAppointments.length,
+        newMessages: notifications.filter((n: any) => !n.is_read).length,
+        totalPatients: 0, // This would need a separate endpoint
+        upcomingAppointments: todayAppointments.slice(0, 3),
+        recentMessages: notifications.slice(0, 3)
       });
       
     } catch (err) {
       console.error('Dashboard API error:', err);
-      // Don't show error, just use fallback data
+      setError('Failed to load dashboard data');
+      // Use fallback data on error
       setDashboardData({
         todayAppointments: 0,
         newMessages: 0,
-        totalPatients: 28,
+        totalPatients: 0,
         upcomingAppointments: [],
         recentMessages: []
       });
