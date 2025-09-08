@@ -2,72 +2,54 @@ import BaseAPI from './api';
 import type { Doctor, ApiResponse } from '../types/api';
 
 export class AuthAPI extends BaseAPI {
-  // Doctor login - try multiple possible endpoints
+  // Doctor login using your exact Laravel endpoint
   static async doctorLogin(data: {
     email: string;
     password: string;
   }): Promise<ApiResponse<Doctor & { token: string }>> {
     console.log('🔑 AuthAPI.doctorLogin called with:', { email: data.email });
     
-    // Try different possible Laravel endpoints
-    const possibleEndpoints = [
-      '/api/doctorLogin',      // Laravel API route
-      '/doctorLogin',          // Direct route
-      '/api/doctor/login',     // RESTful style
-      '/doctor/login',         // Web route style
-      '/login'                 // Generic login
-    ];
-    
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`🔍 Trying endpoint: ${endpoint}`);
-        return await this.post(endpoint, data);
-      } catch (error) {
-        console.log(`❌ Failed endpoint ${endpoint}:`, error.message);
-        // Continue to next endpoint
-      }
+    try {
+      // Use your exact Laravel endpoint
+      console.log('🔍 Calling Laravel endpoint: /api/doctorLogin');
+      const response = await this.post('/doctorLogin', data);
+      console.log('✅ Laravel doctorLogin response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Laravel doctorLogin failed:', error);
+      throw error;
     }
-    
-    throw new Error('No working login endpoint found. Please check your Laravel routes.');
   }
 
-  // Test connection to Laravel backend
+  // Test connection to your Laravel backend
   static async testConnection(): Promise<any> {
     console.log('🧪 Testing Laravel connection...');
-    
-    const testEndpoints = [
-      '/api/test',
-      '/test',
-      '/api/health',
-      '/health',
-      '/'  // Root endpoint
-    ];
-    
-    for (const endpoint of testEndpoints) {
-      try {
-        console.log(`🔍 Testing endpoint: ${endpoint}`);
-        const response = await this.get(endpoint);
-        console.log(`✅ Working endpoint found: ${endpoint}`, response);
-        return { endpoint, response };
-      } catch (error) {
-        console.log(`❌ Failed endpoint ${endpoint}:`, error.message);
-      }
+    return BaseAPI.testConnection();
+  }
+
+  // Fetch doctor profile using your exact endpoint
+  static async fetchDoctorProfile(token: string): Promise<ApiResponse<Doctor>> {
+    console.log('👤 AuthAPI.fetchDoctorProfile called');
+    try {
+      const response = await this.post('/fetchMyDoctorProfile', {}, token);
+      console.log('✅ fetchMyDoctorProfile response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ fetchMyDoctorProfile failed:', error);
+      throw error;
     }
-    
-    throw new Error('Cannot connect to Laravel backend');
   }
 
-  // Refresh authentication
-  static async refreshAuth(token: string): Promise<ApiResponse<Doctor>> {
-    console.log('🔄 AuthAPI.refreshAuth called');
-    return this.post('/api/refreshAuth', {}, token);
-  }
-
-  // Check if doctor profile exists
-  static async checkDoctorProfile(data: {
-    email: string;
-  }): Promise<ApiResponse<{ exists: boolean; status?: string }>> {
-    console.log('👤 AuthAPI.checkDoctorProfile called');
-    return this.post('/api/checkDoctorProfile', data);
+  // Update doctor profile using your exact endpoint
+  static async updateDoctorProfile(data: any, token: string): Promise<ApiResponse<Doctor>> {
+    console.log('📝 AuthAPI.updateDoctorProfile called');
+    try {
+      const response = await this.post('/updateDoctorDetails', data, token);
+      console.log('✅ updateDoctorDetails response:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ updateDoctorDetails failed:', error);
+      throw error;
+    }
   }
 }

@@ -66,14 +66,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('🔐 Attempting login with:', { email, apiUrl: 'https://portal.lovejoy.health/api' });
       
+      // First test connection to Laravel
+      console.log('🧪 Testing Laravel connection...');
+      const connectionTest = await AuthAPI.testConnection();
+      console.log('🔗 Connection test result:', connectionTest);
+      
       try {
-        // Call real Laravel API for authentication
+        // Call your exact Laravel API endpoint
         const response = await AuthAPI.doctorLogin({ email, password });
         
         console.log('🎯 Login API Response:', response);
         
         if (response.success && response.data) {
-          const { token: authToken, ...doctorData } = response.data;
+          // Handle Laravel response structure
+          const authToken = response.data.token || response.token;
+          const doctorData = response.data.doctor || response.data;
           
           console.log('✅ Login successful, doctor data:', doctorData);
           
@@ -84,8 +91,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem('doctor_token', authToken);
           localStorage.setItem('doctor_profile', JSON.stringify(doctorData));
           
-          // Fetch complete profile data
-          await refreshProfileData(authToken);
+          // Fetch complete profile data using Laravel endpoint
+          try {
+            const profileResponse = await AuthAPI.fetchDoctorProfile(authToken);
+            if (profileResponse.success) {
+              setDoctor(profileResponse.data);
+              localStorage.setItem('doctor_profile', JSON.stringify(profileResponse.data));
+            }
+          } catch (profileError) {
+            console.warn('⚠️ Could not fetch complete profile, using login data');
+          }
         } else {
           console.warn('⚠️ Login failed:', response.message);
           throw new Error(response.message || 'Login failed');
@@ -171,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!token) throw new Error('No authentication token');
     
     try {
-      const response = await DoctorAPI.updateDoctorDetails(data, token);
+      const response = await AuthAPI.updateDoctorProfile(data, token);
       if (response.success) {
         const updatedDoctor = { ...doctor, ...response.data };
         setDoctor(updatedDoctor);

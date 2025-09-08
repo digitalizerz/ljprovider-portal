@@ -1,7 +1,7 @@
 // API Configuration for Laravel Backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portal.lovejoy.health';
 
-// Custom headers required by your Laravel middleware
+// Custom headers required by your Laravel checkHeader middleware
 const getHeaders = (token?: string) => ({
   'Content-Type': 'application/json',
   'Accept': 'application/json',
@@ -16,8 +16,13 @@ class BaseAPI {
     options: RequestInit = {},
     token?: string
   ): Promise<T> {
-    // Handle both /api/ prefixed and direct endpoints
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    // Ensure endpoint starts with /api/ to match your Laravel routes
+    const cleanEndpoint = endpoint.startsWith('/api/') 
+      ? endpoint 
+      : endpoint.startsWith('/') 
+        ? `/api${endpoint}`
+        : `/api/${endpoint}`;
+    
     const url = `${API_BASE_URL}${cleanEndpoint}`;
     
     console.log('🔗 API Request:', {
@@ -92,6 +97,21 @@ class BaseAPI {
     return this.request<T>(endpoint, {
       method: 'GET',
     }, token);
+  }
+
+  // Test connection to your Laravel backend
+  static async testConnection(): Promise<any> {
+    console.log('🧪 Testing Laravel connection...');
+    
+    try {
+      // Test the clear-cache endpoint first (no auth required)
+      const response = await this.post('/clear-cache', {});
+      console.log('✅ Laravel connection successful:', response);
+      return { success: true, message: 'Connected to Laravel API', data: response };
+    } catch (error) {
+      console.error('❌ Laravel connection failed:', error);
+      return { success: false, message: error.message, error };
+    }
   }
 }
 
