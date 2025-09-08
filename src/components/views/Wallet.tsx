@@ -8,7 +8,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const Wallet: React.FC = () => {
-  const { doctor } = useAuth();
+  const { doctor, token } = useAuth();
   const { 
     transactions, 
     withdrawRequests, 
@@ -27,13 +27,21 @@ const Wallet: React.FC = () => {
   const [bankDetails, setBankDetails] = useState('');
 
   useEffect(() => {
-    fetchWalletStatement();
-    fetchEarningHistory();
-    fetchPayoutHistory();
+    if (token) {
+      fetchWalletStatement();
+      fetchEarningHistory();
+      fetchPayoutHistory();
+    }
   }, []);
 
   const handleWithdrawRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!withdrawAmount || !bankDetails) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
     try {
       await submitWithdrawRequest(parseFloat(withdrawAmount), bankDetails);
       setShowWithdrawModal(false);
@@ -41,6 +49,7 @@ const Wallet: React.FC = () => {
       setBankDetails('');
       alert('Withdraw request submitted successfully!');
     } catch (error) {
+      console.error('Withdraw error:', error);
       alert('Failed to submit withdraw request. Please try again.');
     }
   };
@@ -62,10 +71,20 @@ const Wallet: React.FC = () => {
     );
   }
 
+  // Don't render if no doctor data
+  if (!doctor) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600">Loading wallet data...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-6 space-y-6">
       {error && (
-        <ErrorMessage message={error} className="mb-6" />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} className="mb-6" />
       )}
       
       {/* Page Header */}
@@ -88,7 +107,7 @@ const Wallet: React.FC = () => {
         />
         <MetricCard
           title="Monthly Earnings"
-          value={formatCurrency(walletStats.totalEarnings)}
+          value={formatCurrency(walletStats.monthlyEarnings)}
           change="+12% from last month"
           changeType="positive"
           icon={TrendingUp}
