@@ -1,7 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import React from 'react';
 import { DoctorAPI } from '../services/doctorAPI';
-import { DoctorAPI } from '../services/doctorAPI';
 import type { Doctor } from '../types/api';
 
 interface AuthContextType {
