@@ -7,11 +7,13 @@ export class AuthAPI extends BaseAPI {
     email: string;
     password: string;
   }): Promise<ApiResponse<Doctor & { token: string }>> {
+    console.log('🔑 AuthAPI.doctorLogin called with:', { email: data.email });
     return this.post('/doctorLogin', data);
   }
 
   // Refresh authentication
   static async refreshAuth(token: string): Promise<ApiResponse<Doctor>> {
+    console.log('🔄 AuthAPI.refreshAuth called');
     return this.post('/refreshAuth', {}, token);
   }
 
@@ -19,6 +21,7 @@ export class AuthAPI extends BaseAPI {
   static async checkDoctorProfile(data: {
     email: string;
   }): Promise<ApiResponse<{ exists: boolean; status?: string }>> {
+    console.log('👤 AuthAPI.checkDoctorProfile called');
     return this.post('/checkDoctorProfile', data);
   }
 }

@@ -64,12 +64,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       
+      console.log('🔐 Attempting login with:', { email, apiUrl: 'https://portal.lovejoy.health/api' });
+      
       try {
         // Call real Laravel API for authentication
         const response = await AuthAPI.doctorLogin({ email, password });
         
+        console.log('🎯 Login API Response:', response);
+        
         if (response.success && response.data) {
           const { token: authToken, ...doctorData } = response.data;
+          
+          console.log('✅ Login successful, doctor data:', doctorData);
           
           setDoctor(doctorData);
           setToken(authToken);
@@ -81,10 +87,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Fetch complete profile data
           await refreshProfileData(authToken);
         } else {
+          console.warn('⚠️ Login failed:', response.message);
           throw new Error(response.message || 'Login failed');
         }
       } catch (apiError) {
-        console.error('API Login failed, using demo mode:', apiError);
+        console.error('❌ API Login failed, using demo mode:', apiError);
         
         // Demo mode fallback - create a sample doctor profile
         const demoDoctor = {
