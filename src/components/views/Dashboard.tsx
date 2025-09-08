@@ -1,17 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, MessageSquare, TrendingUp, Activity, Clock, Video } from 'lucide-react';
 import MetricCard from '../MetricCard';
 import ChartCard from '../ChartCard';
+import { useAuth } from '../../hooks/useAuth';
+import { AppointmentAPI } from '../../services/appointmentAPI';
+import { DoctorAPI } from '../../services/doctorAPI';
+import LoadingSpinner from '../common/LoadingSpinner';
+import ErrorMessage from '../common/ErrorMessage';
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
-  const todayStats = {
-    appointments: 4,
-    newMessages: 7,
-    totalPatients: 32,
+  const { token } = useAuth();
+  const [dashboardData, setDashboardData] = useState({
+    todayAppointments: 0,
+    newMessages: 0,
+    totalPatients: 0,
+    upcomingAppointments: [],
+    recentMessages: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [token]);
+
+  const fetchDashboardData = async () => {
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Fetch today's appointments
+      const today = new Date().toISOString().split('T')[0];
+      const appointmentsResponse = await AppointmentAPI.fetchAcceptedAppointsByDate({ date: today }, token);
+      
+      // Fetch appointment requests for new messages count
+      const requestsResponse = await AppointmentAPI.fetchAppointmentRequests({ 
+        page: 1, 
+        limit: 10,
+        status: 'pending' 
+      }, token);
+      
+      // Fetch doctor notifications for messages
+      const notificationsResponse = await DoctorAPI.fetchDoctorNotifications({ 
+        page: 1, 
+        limit: 10 
+      }, token);
+      
+      if (appointmentsResponse.success) {
+        setDashboardData(prev => ({
+          ...prev,
+          todayAppointments: appointmentsResponse.data.length,
+          upcomingAppointments: appointmentsResponse.data.slice(0, 4)
+        }));
+      }
+      
+      if (requestsResponse.success) {
+        setDashboardData(prev => ({
+          ...prev,
+          newMessages: requestsResponse.data.data.length
+        }));
+      }
+      
+      if (notificationsResponse.success) {
+        setDashboardData(prev => ({
+          ...prev,
+          recentMessages: notificationsResponse.data.data.slice(0, 4)
+        }));
+      }
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const appointmentData = [
@@ -31,19 +98,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     { period: 'Week 4', amount: 1650 },
   ];
 
-  const upcomingAppointments = [
-    { id: 1, patient: 'Sarah Johnson', time: '10:00 AM', type: 'Video Call', status: 'confirmed', concern: 'Anxiety Management' },
-    { id: 2, patient: 'Michael Chen', time: '2:00 PM', type: 'In-Person', status: 'confirmed', concern: 'Depression Therapy' },
-    { id: 3, patient: 'Emma Davis', time: '4:30 PM', type: 'Video Call', status: 'pending', concern: 'Trauma Counseling' },
-    { id: 4, patient: 'James Wilson', time: '6:00 PM', type: 'Phone Call', status: 'confirmed', concern: 'Stress Management' },
-  ];
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
-  const recentMessages = [
-    { id: 1, patient: 'John Doe', message: 'Thank you for the session yesterday. The breathing exercises really helped...', time: '2 hours ago', unread: true, priority: 'normal' },
-    { id: 2, patient: 'Lisa Wang', message: 'I have a question about my medication dosage...', time: '4 hours ago', unread: true, priority: 'high' },
-    { id: 3, patient: 'Robert Smith', message: 'Can we reschedule our appointment for next week?', time: '1 day ago', unread: false, priority: 'normal' },
-    { id: 4, patient: 'Maria Garcia', message: 'I\'m feeling much better after our last session...', time: '2 days ago', unread: false, priority: 'normal' },
-  ];
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -65,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
         <div onClick={() => onViewChange('appointments')} className="cursor-pointer">
           <MetricCard
             title="Today's Appointments"
-            value={todayStats.appointments.toString()}
+            value={dashboardData.todayAppointments.toString()}
             change="+1 from yesterday"
             changeType="positive"
             icon={Calendar}
@@ -75,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
         <div onClick={() => onViewChange('messages')} className="cursor-pointer">
           <MetricCard
             title="New Messages"
-            value={todayStats.newMessages.toString()}
+            value={dashboardData.newMessages.toString()}
             change="+4 unread"
             changeType="positive"
             icon={MessageSquare}
@@ -85,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
         <div onClick={() => onViewChange('patients')} className="cursor-pointer">
           <MetricCard
             title="Total Patients"
-            value={todayStats.totalPatients.toString()}
+            value="--"
             change="+4 this week"
             changeType="positive"
             icon={Users}
@@ -127,21 +196,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
           </div>
           
           <div className="space-y-4">
-            {upcomingAppointments.map((appointment) => (
+            {dashboardData.upcomingAppointments.map((appointment: any) => (
               <div key={appointment.id} className="glass-button rounded-lg p-4 hover:bg-white/30 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-lovejoy-100 rounded-full flex items-center justify-center">
-                      {appointment.type === 'Video Call' ? (
+                      {appointment.consultation_type === 'video' ? (
                         <Video className="w-5 h-5 text-lovejoy-600" />
                       ) : (
                         <Users className="w-5 h-5 text-lovejoy-600" />
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800 text-shadow-light">{appointment.patient}</p>
-                      <p className="text-sm text-gray-600">{appointment.time} • {appointment.type}</p>
-                      <p className="text-xs text-gray-500">{appointment.concern}</p>
+                      <p className="font-medium text-gray-800 text-shadow-light">{appointment.patient?.name || 'Patient'}</p>
+                      <p className="text-sm text-gray-600">{appointment.appointment_time} • {appointment.consultation_type}</p>
+                      <p className="text-xs text-gray-500">{appointment.symptoms || 'Regular session'}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -167,29 +236,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
           </div>
           
           <div className="space-y-4">
-            {recentMessages.map((message) => (
+            {dashboardData.recentMessages.map((message: any) => (
               <div key={message.id} className="glass-button rounded-lg p-4 hover:bg-white/30 transition-all duration-300">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-bold text-blue-600">
-                        {message.patient.split(' ').map(n => n[0]).join('')}
+                        {message.title?.substring(0, 2).toUpperCase() || 'N'}
                       </span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="font-medium text-gray-800 text-shadow-light">{message.patient}</p>
-                        {message.unread && (
+                        <p className="font-medium text-gray-800 text-shadow-light">{message.title}</p>
+                        {!message.is_read && (
                           <div className="flex items-center space-x-1">
                             <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                            {message.priority === 'high' && (
+                            {message.type === 'appointment' && (
                               <span className="text-xs bg-red-100 text-red-600 px-1 rounded">High</span>
                             )}
                           </div>
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mt-1 truncate">{message.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{message.time}</p>
+                      <p className="text-xs text-gray-500 mt-1">{new Date(message.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
