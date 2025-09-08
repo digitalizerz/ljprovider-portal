@@ -1,5 +1,5 @@
-// API Configuration for Laravel Superadmin Backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portal.lovejoy.health/api';
+// API Configuration for Laravel Backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portal.lovejoy.health';
 
 // Custom headers required by your Laravel middleware
 const getHeaders = (token?: string) => ({
@@ -16,13 +16,16 @@ class BaseAPI {
     options: RequestInit = {},
     token?: string
   ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Handle both /api/ prefixed and direct endpoints
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${API_BASE_URL}${cleanEndpoint}`;
     
     console.log('🔗 API Request:', {
       url,
       method: options.method || 'GET',
       headers: getHeaders(token),
-      hasToken: !!token
+      hasToken: !!token,
+      endpoint: cleanEndpoint
     });
 
     try {
@@ -43,12 +46,18 @@ class BaseAPI {
       console.log('📡 API Response:', {
         status: response.status,
         statusText: response.statusText,
-        url: response.url
+        url: response.url,
+        ok: response.ok
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
+        console.error('❌ API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+          url: response.url
+        });
         throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
