@@ -1,6 +1,6 @@
 # LoveJoy Health - Provider Portal
 
-A comprehensive healthcare provider portal built with React, TypeScript, and Tailwind CSS, integrated with a Laravel backend.
+A comprehensive healthcare provider portal built with React, TypeScript, and Tailwind CSS, integrated with Laravel backend.
 
 ## 🌐 Live Application
 
