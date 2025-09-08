@@ -1,145 +1,180 @@
 import { useState, useEffect } from 'react';
-import { AppointmentAPI } from '../services/appointmentAPI';
+import { DoctorAPI } from '../services/doctorAPI';
 import { useAuth } from './useAuth';
-import type { Appointment, PaginatedResponse } from '../types/api';
+import type { WalletTransaction, WithdrawRequest } from '../types/api';
+
+interface WalletStats {
+  currentBalance: number;
+  totalEarnings: number;
+  pendingWithdrawals: number;
+  monthlyEarnings: number;
+}
 
 export const useWallet = () => {
-  const { token } = useAuth();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const { token, doctor } = useAuth();
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
+  const [walletStats, setWalletStats] = useState<WalletStats>({
+    currentBalance: 0,
+    totalEarnings: 0,
+    pendingWithdrawals: 0,
+    monthlyEarnings: 0
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAppointmentRequests = async (filters?: {
+  useEffect(() => {
+    if (doctor) {
+      // Set wallet stats from doctor profile
+      setWalletStats({
+        currentBalance: doctor.wallet_balance || 0,
+        totalEarnings: doctor.wallet_balance || 0,
+        pendingWithdrawals: 0,
+        monthlyEarnings: 3200
+      });
+    }
+  }, [doctor]);
+
+  const fetchWalletStatement = async (filters?: {
     page?: number;
     limit?: number;
-    status?: 'pending' | 'accepted' | 'declined';
+    from_date?: string;
+    to_date?: string;
   }) => {
     if (!token) return;
     
     try {
       setIsLoading(true);
       setError(null);
-      const response = await AppointmentAPI.fetchAppointmentRequests(filters || {}, token);
       
-      if (response.success) {
-        setAppointments(response.data.data);
-      } else {
-        setError(response.message);
-      }
+      // For now, use sample data while API is being tested
+      const sampleTransactions: WalletTransaction[] = [
+        {
+          id: 1,
+          user_id: 1,
+          doctor_id: 1,
+          transaction_type: 'credit',
+          amount: 150,
+          description: 'Session payment from Sarah Johnson',
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          user_id: 1,
+          doctor_id: 1,
+          transaction_type: 'credit',
+          amount: 200,
+          description: 'Session payment from Michael Chen',
+          status: 'completed',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          updated_at: new Date(Date.now() - 86400000).toISOString()
+        },
+        {
+          id: 3,
+          user_id: 1,
+          doctor_id: 1,
+          transaction_type: 'debit',
+          amount: 500,
+          description: 'Withdrawal to bank account',
+          status: 'completed',
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          updated_at: new Date(Date.now() - 172800000).toISOString()
+        }
+      ];
+      
+      setTransactions(sampleTransactions);
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch appointments');
+      console.error('Wallet statement error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch wallet statement');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchAppointmentsByDate = async (date: string) => {
-    if (!token) return;
+  const fetchEarningHistory = async (filters?: {
+    page?: number;
+    limit?: number;
+    from_date?: string;
+    to_date?: string;
+  }) => {
+    // This would fetch earning history from the API
+    // For now, it's handled by fetchWalletStatement
+  };
+
+  const submitWithdrawRequest = async (amount: number, bankDetails: string) => {
+    if (!token) throw new Error('No authentication token');
     
     try {
       setIsLoading(true);
-      setError(null);
-      const response = await AppointmentAPI.fetchAcceptedAppointsByDate({ date }, token);
       
-      if (response.success) {
-        setAppointments(response.data);
-      } else {
-        setError(response.message);
-      }
+      // For now, simulate the request
+      const newRequest: WithdrawRequest = {
+        id: Date.now(),
+        doctor_id: doctor?.id || 1,
+        amount: amount,
+        bank_account_details: bankDetails,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      setWithdrawRequests(prev => [newRequest, ...prev]);
+      
+      // Update balance
+      setWalletStats(prev => ({
+        ...prev,
+        currentBalance: prev.currentBalance - amount,
+        pendingWithdrawals: prev.pendingWithdrawals + amount
+      }));
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch appointments');
+      console.error('Withdraw request error:', err);
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const acceptAppointment = async (appointmentId: number) => {
+  const fetchPayoutHistory = async (filters?: {
+    page?: number;
+    limit?: number;
+  }) => {
     if (!token) return;
     
     try {
-      const response = await AppointmentAPI.acceptAppointment({ appointment_id: appointmentId }, token);
+      // Sample payout history
+      const sampleRequests: WithdrawRequest[] = [
+        {
+          id: 1,
+          doctor_id: doctor?.id || 1,
+          amount: 500,
+          bank_account_details: 'Bank of America - ****1234',
+          status: 'approved',
+          processed_at: new Date(Date.now() - 86400000).toISOString(),
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          updated_at: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
       
-      if (response.success) {
-        // Update local state
-        setAppointments(prev => 
-          prev.map(apt => 
-            apt.id === appointmentId 
-              ? { ...apt, status: 'accepted' }
-              : apt
-          )
-        );
-        return response.data;
-      } else {
-        throw new Error(response.message);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept appointment');
-      throw err;
-    }
-  };
-
-  const declineAppointment = async (appointmentId: number, reason?: string) => {
-    if (!token) return;
-    
-    try {
-      const response = await AppointmentAPI.declineAppointment({ 
-        appointment_id: appointmentId,
-        reason 
-      }, token);
+      setWithdrawRequests(sampleRequests);
       
-      if (response.success) {
-        // Update local state
-        setAppointments(prev => 
-          prev.map(apt => 
-            apt.id === appointmentId 
-              ? { ...apt, status: 'declined' }
-              : apt
-          )
-        );
-        return response.data;
-      } else {
-        throw new Error(response.message);
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to decline appointment');
-      throw err;
-    }
-  };
-
-  const completeAppointment = async (appointmentId: number) => {
-    if (!token) return;
-    
-    try {
-      const response = await AppointmentAPI.completeAppointment({ appointment_id: appointmentId }, token);
-      
-      if (response.success) {
-        // Update local state
-        setAppointments(prev => 
-          prev.map(apt => 
-            apt.id === appointmentId 
-              ? { ...apt, status: 'completed' }
-              : apt
-          )
-        );
-        return response.data;
-      } else {
-        throw new Error(response.message);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete appointment');
-      throw err;
+      console.error('Payout history error:', err);
     }
   };
 
   return {
-    appointments,
+    transactions,
+    withdrawRequests,
+    walletStats,
     isLoading,
     error,
-    fetchAppointmentRequests,
-    fetchAppointmentsByDate,
-    fetchAppointmentsByDate,
-    acceptAppointment,
-    declineAppointment,
-    completeAppointment,
+    fetchWalletStatement,
+    fetchEarningHistory,
+    submitWithdrawRequest,
+    fetchPayoutHistory,
   };
 };
