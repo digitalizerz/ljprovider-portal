@@ -20,6 +20,13 @@ export interface Doctor {
   is_online: boolean;
   is_verified: boolean;
   wallet_balance: number;
+  license_number?: string;
+  license_verified?: boolean;
+  background_check?: boolean;
+  location?: string;
+  availability?: string;
+  total_patients?: number;
+  total_appointments?: number;
   created_at: string;
   updated_at: string;
 }
