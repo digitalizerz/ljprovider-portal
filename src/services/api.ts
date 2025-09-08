@@ -17,14 +17,21 @@ class BaseAPI {
     token?: string
   ): Promise<T> {
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
+        signal: controller.signal,
         headers: {
           ...getHeaders(token),
           ...options.headers,
         },
       });
 
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
@@ -32,6 +39,9 @@ class BaseAPI {
       const data = await response.json();
       return data;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please check your connection');
+      }
       console.error('API Request failed:', error);
       throw error;
     }
