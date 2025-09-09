@@ -6,6 +6,9 @@ const getHeaders = (token?: string) => ({
   'Content-Type': 'application/json',
   'Accept': 'application/json',
   'X-Custom-Header': import.meta.env.VITE_CUSTOM_HEADER || 'lovejoy-health-portal',
+  'Origin': window.location.origin,
+  'Access-Control-Request-Method': 'POST',
+  'Access-Control-Request-Headers': 'Content-Type, X-Custom-Header, Authorization',
   ...(token && { 'Authorization': `Bearer ${token}` }),
 });
 

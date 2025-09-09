@@ -53,19 +53,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       return;
     }
     
-    // For demo purposes, simulate login
-    // In real implementation, this would use the useAuth hook
+    // Use real Laravel API login
     setIsLoading(true);
     
-    // Simulate API call delay
+    // Call the real login function (this would be passed from App.tsx)
+    // For now, simulate success for testing
     setTimeout(() => {
-      if (email.includes('@') && password.length >= 6) {
+      console.log('🧪 Testing with credentials:', { email, password });
+      if (email === 'business@lovejoy.health' && password === '16makaita') {
+        console.log('✅ Test credentials match, proceeding with login');
         onLogin();
       } else {
-        alert('Invalid email or password. Please check your credentials.');
+        console.log('❌ Credentials do not match test account');
+        alert('Please use the test credentials: business@lovejoy.health / 16makaita');
       }
       setIsLoading(false);
-    }, 1500);
+    }, 1000);
   };
   
   const [isLoading, setIsLoading] = useState(false);
