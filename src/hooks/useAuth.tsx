@@ -76,7 +76,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       try {
         // Call your exact Laravel API endpoint
-        const response = await AuthAPI.doctorLogin({ email, password });
+        const response = await AuthAPI.doctorLogin({ 
+          email, 
+          password,
+          firebase_token: 'demo-firebase-token-' + Date.now()
+        });
         
         console.log('🎯 Login API Response:', response);
         

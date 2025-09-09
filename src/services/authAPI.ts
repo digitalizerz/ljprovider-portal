@@ -6,13 +6,17 @@ export class AuthAPI extends BaseAPI {
   static async doctorLogin(data: {
     email: string;
     password: string;
+    firebase_token?: string;
   }): Promise<ApiResponse<Doctor & { token: string }>> {
     console.log('🔑 AuthAPI.doctorLogin called with:', { email: data.email });
     
     try {
       // Use your exact Laravel endpoint
       console.log('🔍 Calling Laravel endpoint: /api/doctorLogin');
-      const response = await this.post('/doctorLogin', data);
+      const response = await this.post('/doctorLogin', {
+        ...data,
+        firebase_token: data.firebase_token || 'demo-firebase-token-' + Date.now()
+      });
       console.log('✅ Laravel doctorLogin response:', response);
       return response;
     } catch (error) {
