@@ -6,9 +6,6 @@ const getHeaders = (token?: string) => ({
   'Content-Type': 'application/json',
   'Accept': 'application/json',
   'X-Custom-Header': import.meta.env.VITE_CUSTOM_HEADER || 'lovejoy-health-portal',
-  'Origin': window.location.origin,
-  'Access-Control-Request-Method': 'POST',
-  'Access-Control-Request-Headers': 'Content-Type, X-Custom-Header, Authorization',
   ...(token && { 'Authorization': `Bearer ${token}` }),
 });
 
@@ -43,6 +40,8 @@ class BaseAPI {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit',
         headers: {
           ...getHeaders(token),
           ...options.headers,
@@ -74,6 +73,11 @@ class BaseAPI {
       return data;
       
     } catch (error) {
+      if (error.message.includes('CORS')) {
+        console.error('🚫 CORS Error - Laravel backend needs CORS configuration');
+        throw new Error('CORS Error: Your Laravel backend needs to allow requests from this domain. Please configure CORS in Laravel.');
+      }
+      
       if (error.name === 'AbortError') {
         console.error('⏰ API Timeout:', url);
         throw new Error('Request timeout - please check your connection and API server');
