@@ -14,8 +14,9 @@ export class AuthAPI extends BaseAPI {
       // Use your exact Laravel endpoint
       console.log('🔍 Calling Laravel endpoint: /api/doctorLogin');
       const response = await this.post('/doctorLogin', {
-        ...data,
-        firebase_token: data.firebase_token || 'demo-firebase-token-' + Date.now()
+        email: data.email,
+        password: data.password,
+        firebase_token: data.firebase_token || null
       });
       console.log('✅ Laravel doctorLogin response:', response);
       return response;
