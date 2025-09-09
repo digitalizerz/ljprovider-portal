@@ -68,6 +68,16 @@ export class AuthAPI extends BaseAPI {
       throw error;
     }
   }
+
+  // Mobile doctor login with firebase token
+  static async mobileDoctorLogin(data: {
+    email: string;
+    password: string;
+    firebase_token?: string;
+  }): Promise<ApiResponse<Doctor & { token: string }>> {
+    console.log('📱 AuthAPI.mobileDoctorLogin called');
+    try {
+      const response = await this.post('/doctorLogin', {
         email: data.email,
         password: data.password,
         firebase_token: data.firebase_token || null
