@@ -231,6 +231,39 @@ The application is configured to connect to:
 - **Production API**: `https://portal.lovejoy.health/api`
 - **Development API**: Can be overridden in `.env.local`
 
+### CORS Configuration Required
+Your Laravel backend needs CORS configuration to allow frontend requests. Add this to your Laravel project:
+
+1. **Install Laravel CORS package** (if not already installed):
+```bash
+composer require fruitcake/laravel-cors
+```
+
+2. **Publish CORS config**:
+```bash
+php artisan vendor:publish --tag="cors"
+```
+
+3. **Update `config/cors.php`**:
+```php
+'paths' => ['api/*', 'sanctum/csrf-cookie'],
+'allowed_methods' => ['*'],
+'allowed_origins' => ['*'], // Or specify your frontend domain
+'allowed_origins_patterns' => [],
+'allowed_headers' => ['*'],
+'exposed_headers' => [],
+'max_age' => 0,
+'supports_credentials' => false,
+```
+
+4. **Add CORS middleware to `app/Http/Kernel.php`**:
+```php
+protected $middleware = [
+    // ... other middleware
+    \Fruitcake\Cors\HandleCors::class,
+];
+```
+
 ### Environment Variables
 ```env
 VITE_API_URL=https://portal.lovejoy.health/api
