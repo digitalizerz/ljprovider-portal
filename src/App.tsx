@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { AuthProvider } from './hooks/useAuth.tsx';
+import { useAuth } from './hooks/useAuth.tsx';
 import LoginScreen from './components/LoginScreen';
 import ProviderDashboard from './components/ProviderDashboard';
 import PatientProfile from './components/profiles/PatientProfile';
 
-function App() {
+const AppContent: React.FC = () => {
+  const { login, isLoading } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedProfile, setSelectedProfile] = useState<{type: string, id: string} | null>(null);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      console.log('🚀 App.tsx calling useAuth.login with:', { email });
+      await login(email, password);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('❌ Login failed in App.tsx:', error);
+      alert('Login failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   };
 
   const handleLogout = () => {
@@ -25,41 +34,41 @@ function App() {
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
-    setSelectedProfile(null); // Clear profile when navigating to main views
-  };
-
-  const renderContent = () => {
-    // Add your content rendering logic here
+    setSelectedProfile(null);
   };
 
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen onLogin={handleLogin} isLoading={isLoading} />;
   }
 
   if (selectedProfile) {
     if (selectedProfile.type === 'patient') {
       return (
-        <AuthProvider>
-          <PatientProfile 
-            patientId={selectedProfile.id} 
-            onBack={() => setSelectedProfile(null)} 
-            onLogout={handleLogout}
-            currentView={currentView}
-            onViewChange={handleViewChange}
-          />
-        </AuthProvider>
+        <PatientProfile 
+          patientId={selectedProfile.id} 
+          onBack={() => setSelectedProfile(null)} 
+          onLogout={handleLogout}
+          currentView={currentView}
+          onViewChange={handleViewChange}
+        />
       );
     }
   }
 
   return (
+    <ProviderDashboard 
+      currentView={currentView}
+      onViewChange={handleViewChange}
+      onLogout={handleLogout}
+      onProfileView={handleProfileView}
+    />
+  );
+};
+
+function App() {
+  return (
     <AuthProvider>
-      <ProviderDashboard 
-        currentView={currentView}
-        onViewChange={handleViewChange}
-        onLogout={handleLogout}
-        onProfileView={handleProfileView}
-      />
+      <AppContent />
     </AuthProvider>
   );
 }

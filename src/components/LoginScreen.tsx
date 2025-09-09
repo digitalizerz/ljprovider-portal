@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Heart, Lock, Mail, UserCheck, ArrowRight, ArrowLeft, Check, User, FileText, Shield, CreditCard } from 'lucide-react';
 
 interface LoginScreenProps {
-  onLogin: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, isLoading = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
@@ -53,25 +54,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       return;
     }
     
-    // Use real Laravel API login
-    setIsLoading(true);
-    
-    // Call the real login function (this would be passed from App.tsx)
-    // For now, simulate success for testing
-    setTimeout(() => {
-      console.log('🧪 Testing with credentials:', { email, password });
-      if (email === 'business@lovejoy.health' && password === '16makaita') {
-        console.log('✅ Test credentials match, proceeding with login');
-        onLogin();
-      } else {
-        console.log('❌ Credentials do not match test account');
-        alert('Please use the test credentials: business@lovejoy.health / 16makaita');
-      }
-      setIsLoading(false);
-    }, 1000);
+    // Call the real login function from App.tsx
+    console.log('🔐 Attempting real Laravel API login with:', { email, password });
+    onLogin(email, password).catch(error => {
+      console.error('Login error caught in LoginScreen:', error);
+    });
   };
   
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
