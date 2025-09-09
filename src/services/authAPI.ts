@@ -2,18 +2,72 @@ import BaseAPI from './api';
 import type { Doctor, ApiResponse } from '../types/api';
 
 export class AuthAPI extends BaseAPI {
-  // Doctor login using your exact Laravel endpoint
+  // Doctor login for web portal (different from mobile app)
   static async doctorLogin(data: {
     email: string;
     password: string;
-    firebase_token?: string;
   }): Promise<ApiResponse<Doctor & { token: string }>> {
     console.log('🔑 AuthAPI.doctorLogin called with:', { email: data.email });
     
     try {
-      // Use your exact Laravel endpoint
-      console.log('🔍 Calling Laravel endpoint: /api/doctorLogin');
-      const response = await this.post('/doctorLogin', {
+      // Try web-specific login endpoint first
+      console.log('🔍 Trying web login endpoint: /api/doctorWebLogin');
+      try {
+        const response = await this.post('/doctorWebLogin', {
+          email: data.email,
+          password: data.password,
+        });
+        console.log('✅ Laravel doctorWebLogin response:', response);
+        return response;
+      } catch (webError) {
+        console.log('⚠️ Web login endpoint not found, trying mobile endpoint without firebase');
+        
+        // Fallback to mobile endpoint but handle firebase requirement
+        const response = await this.post('/doctorLogin', {
+          email: data.email,
+          password: data.password,
+          firebase_token: '', // Empty string instead of null
+        });
+        console.log('✅ Laravel doctorLogin response:', response);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Laravel login failed:', error);
+      throw error;
+    }
+  }
+
+  // Alternative: Try basic auth endpoint
+  static async basicLogin(data: {
+    email: string;
+    password: string;
+  }): Promise<ApiResponse<Doctor & { token: string }>> {
+    console.log('🔑 Trying basic login endpoint');
+    try {
+      // Try common Laravel auth endpoints
+      const endpoints = ['/login', '/auth/login', '/doctor/login', '/web/login'];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
+          const response = await this.post(endpoint, {
+            email: data.email,
+            password: data.password,
+          });
+          console.log(`✅ Success with ${endpoint}:`, response);
+          return response;
+        } catch (endpointError) {
+          console.log(`❌ ${endpoint} failed:`, endpointError.message);
+          continue;
+        }
+      }
+      
+      throw new Error('No working login endpoint found');
+    } catch (error) {
+      console.error('❌ Basic login failed:', error);
+      throw error;
+    }
+  }
         email: data.email,
         password: data.password,
         firebase_token: data.firebase_token || null

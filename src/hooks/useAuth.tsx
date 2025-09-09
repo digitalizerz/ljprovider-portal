@@ -75,11 +75,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('🔍 Testing different header values...');
       
       try {
-        // Call your exact Laravel API endpoint
-        const response = await AuthAPI.doctorLogin({ 
-          email, 
-          password
-        });
+        // Try web portal login first
+        console.log('🌐 Attempting web portal login...');
+        let response;
+        
+        try {
+          response = await AuthAPI.doctorLogin({ email, password });
+        } catch (loginError) {
+          console.log('🔄 Primary login failed, trying alternative endpoints...');
+          response = await AuthAPI.basicLogin({ email, password });
+        }
         
         console.log('🎯 Login API Response:', response);
         
