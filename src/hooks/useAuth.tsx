@@ -71,6 +71,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const connectionTest = await AuthAPI.testConnection();
       console.log('🔗 Connection test result:', connectionTest);
       
+      // Try different header values to find the right one
+      console.log('🔍 Testing different header values...');
+      
       try {
         // Call your exact Laravel API endpoint
         const response = await AuthAPI.doctorLogin({ email, password });

@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portal.lovejoy.hea
 const getHeaders = (token?: string) => ({
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'X-Custom-Header': import.meta.env.VITE_CUSTOM_HEADER || 'lovejoy-health-portal',
+  'X-Custom-Header': 'lovejoy-health-portal',
   ...(token && { 'Authorization': `Bearer ${token}` }),
 });
 
