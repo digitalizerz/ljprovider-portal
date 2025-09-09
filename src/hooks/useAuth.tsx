@@ -167,8 +167,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      setIsLoading(true);
-      
+        // Now try the actual login with correct APIKEY header
+        console.log('🔍 Calling doctorLogin with APIKEY: 123');
       if (token) {
         try {
           await DoctorAPI.logOutDoctor(token);
