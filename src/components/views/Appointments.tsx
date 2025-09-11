@@ -17,6 +17,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ onProfileView }) => {
     isLoading, 
     error, 
     fetchAppointmentRequests,
+    fetchAppointmentsByDate,
     acceptAppointment,
     declineAppointment 
   } = useAppointments();

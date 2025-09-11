@@ -9,32 +9,8 @@ export class AuthAPI extends BaseAPI {
   }): Promise<ApiResponse<Doctor & { token: string }>> {
     console.log('🔑 AuthAPI.doctorLogin called with:', { email: data.email });
     
-    try {
-      // Try web-specific login endpoint first
-      console.log('🔍 Trying web login endpoint: /api/doctorWebLogin');
-      try {
-        const response = await this.post('/doctorWebLogin', {
-          email: data.email,
-          password: data.password,
-        });
-        console.log('✅ Laravel doctorWebLogin response:', response);
-        return response;
-      } catch (webError) {
-        console.log('⚠️ Web login endpoint not found, trying mobile endpoint without firebase');
-        
-        // Fallback to mobile endpoint but handle firebase requirement
-        const response = await this.post('/doctorLogin', {
-          email: data.email,
-          password: data.password,
-          firebase_token: null, // Use null instead of empty string
-        });
-        console.log('✅ Laravel doctorLogin response:', response);
-        return response;
-      }
-    } catch (error) {
-      console.error('❌ Laravel login failed:', error);
-      throw error;
-    }
+    // Use basicLogin strategy to try common Laravel endpoints
+    return this.basicLogin(data);
   }
 
   // Alternative: Try basic auth endpoint
