@@ -26,7 +26,7 @@ export class AuthAPI extends BaseAPI {
         const response = await this.post('/doctorLogin', {
           email: data.email,
           password: data.password,
-          firebase_token: '', // Empty string instead of null
+          firebase_token: null, // Use null instead of empty string
         });
         console.log('✅ Laravel doctorLogin response:', response);
         return response;

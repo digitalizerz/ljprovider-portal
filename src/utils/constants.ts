@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://portal.lovejoy.health/api',
+  BASE_URL: import.meta.env.VITE_API_URL || 'https://portal.lovejoy.health',
   CUSTOM_HEADER: import.meta.env.VITE_CUSTOM_HEADER || 'lovejoy-health-portal',
   TIMEOUT: 30000, // 30 seconds
 };
