@@ -35,7 +35,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ onProfileView }) => {
         fetchAppointmentRequests({ status: selectedTab as any });
       }
     }
-  }, [token, selectedTab, selectedDate]);
 
   const handleAcceptAppointment = async (appointmentId: number) => {
     try {
